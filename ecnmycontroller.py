@@ -13,7 +13,7 @@ sys.path.append(
 import p4runtime_lib.bmv2
 from p4runtime_lib.switch import ShutdownAllSwitchConnections
 import p4runtime_lib.helper
-
+#写交换机静态规则
 def writeTunnelRules(p4info_helper, egress_sw,port,dst_eth_addr, dst_ip_addr,wei):
     table_entry = p4info_helper.buildTableEntry(
         table_name="MyIngress.ipv4_lpm",
@@ -30,7 +30,7 @@ def writeTunnelRules(p4info_helper, egress_sw,port,dst_eth_addr, dst_ip_addr,wei
     print("Installed egress tunnel rule on %s" % egress_sw.name)
     print(dst_eth_addr,port)
 
-
+#读入table规则
 def readTableRules(p4info_helper, sw):
   
     print('\n----- Reading tables rules for %s -----' % sw.name)
@@ -51,23 +51,14 @@ def readTableRules(p4info_helper, sw):
                 print(p4info_helper.get_action_param_name(action_name, p.param_id), end=' ')
                 print('%r' % p.value, end=' ')
             print()
-
-def printCounter(p4info_helper, sw, counter_name, index):
-    for response in sw.ReadCounters(p4info_helper.get_counters_id(counter_name), index):
-        for entity in response.entities:
-            counter = entity.counter_entry
-            print("%s %s %d: %d packets (%d bytes)" % (
-                sw.name, counter_name, index,
-                counter.data.packet_count, counter.data.byte_count
-            ))
-
+#grpc连接错误时打印
 def printGrpcError(e):
     print("gRPC Error:", e.details(), end=' ')
     status_code = e.code()
     print("(%s)" % status_code.name, end=' ')
     traceback = sys.exc_info()[2]
     print("[%s:%d]" % (traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-
+#初始化三个交换机
 def main(p4info_file_path, bmv2_file_path):
     # Instantiate a P4Runtime helper from the p4info file
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
@@ -104,7 +95,7 @@ def main(p4info_file_path, bmv2_file_path):
         s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
                                        bmv2_json_file_path=bmv2_file_path)
         print("Installed P4 Program using SetForwardingPipelineConfig on s3")
-
+#通过写规则使交换机可以正确转发ipv4报文，实现ping通
         writeTunnelRules(p4info_helper,egress_sw=s1, port=2,dst_eth_addr="08:00:00:00:01:01", dst_ip_addr="10.0.1.1",wei=32)
 
         writeTunnelRules(p4info_helper, egress_sw=s1, port=1,dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.11",wei=32)
